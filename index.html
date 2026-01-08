@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mind Reactor</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        cursor: none;
+        user-select: none;
+    }
+
+    body {
+        background: radial-gradient(circle at center, #0a0a0a, #000);
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        color: white;
+    }
+
+    .cursor {
+        position: fixed;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: white;
+        pointer-events: none;
+        mix-blend-mode: difference;
+        z-index: 1000;
+        transition: transform 0.1s linear;
+    }
+
+    .particle {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0.8;
+        animation: fade 3s linear forwards;
+    }
+
+    @keyframes fade {
+        to {
+            opacity: 0;
+            transform: scale(0);
+        }
+    }
+
+    .mode {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        letter-spacing: 4px;
+        opacity: 0.4;
+        font-size: 12px;
+    }
+
+    .pulse {
+        position: absolute;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.2);
+        animation: pulse 2s ease-out forwards;
+    }
+
+    @keyframes pulse {
+        from {
+            transform: scale(0);
+            opacity: 1;
+        }
+        to {
+            transform: scale(5);
+            opacity: 0;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="cursor"></div>
+<div class="mode">CALM</div>
+
+<script>
+/* =========================
+   MIND REACTOR CORE
+========================= */
+
+const cursor = document.querySelector('.cursor');
+const modeText = document.querySelector('.mode');
+
+let lastX = 0, lastY = 0;
+let speed = 0;
+let clicks = 0;
+let mode = "CALM";
+
+/* ---------- AUDIO ---------- */
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+function playTone(freq, duration = 0.05) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.value = 0.03;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+/* ---------- PARTICLES ---------- */
+function spawnParticle(x, y, intensity) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * intensity + 2;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.background = `hsl(${Math.random()*360},100%,70%)`;
+    document.body.appendChild(p);
+
+    setTimeout(() => p.remove(), 3000);
+}
+
+/* ---------- PULSE ---------- */
+function pulse(x, y) {
+    const pulse = document.createElement('div');
+    pulse.className = 'pulse';
+    pulse.style.left = x + 'px';
+    pulse.style.top = y + 'px';
+    pulse.style.width = '20px';
+    pulse.style.height = '20px';
+    document.body.appendChild(pulse);
+
+    setTimeout(() => pulse.remove(), 2000);
+}
+
+/* ---------- MODE LOGIC ---------- */
+function updateMode() {
+    if (speed < 5) mode = "CALM";
+    else if (speed < 15) mode = "FOCUS";
+    else if (speed < 30) mode = "CHAOS";
+    else mode = "VOID";
+
+    modeText.textContent = mode;
+}
+
+/* ---------- MOUSE MOVE ---------- */
+document.addEventListener('mousemove', e => {
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    speed = Math.sqrt(dx*dx + dy*dy);
+
+    cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) scale(${1 + speed/40})`;
+
+    spawnParticle(e.clientX, e.clientY, speed);
+    playTone(200 + speed * 10, 0.02);
+
+    lastX = e.clientX;
+    lastY = e.clientY;
+
+    updateMode();
+});
+
+/* ---------- CLICK ---------- */
+document.addEventListener('click', e => {
+    clicks++;
+    pulse(e.clientX, e.clientY);
+    playTone(100 + clicks * 20, 0.1);
+
+    if (clicks % 7 === 0) {
+        document.body.style.background =
+            `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, #111, #000)`;
+    }
+});
+
+/* ---------- IDLE DETECTION ---------- */
+let idleTimer;
+function resetIdle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+        modeText.textContent = "DREAM";
+        playTone(60, 0.5);
+    }, 4000);
+}
+document.addEventListener('mousemove', resetIdle);
+document.addEventListener('click', resetIdle);
+
+/* ---------- START MESSAGE ---------- */
+setTimeout(() => {
+    modeText.textContent = "MOVE. DISCOVER.";
+}, 1000);
+</script>
+
+</body>
+</html>
